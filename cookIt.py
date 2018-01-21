@@ -4,9 +4,16 @@ import analog
 import time
 import random
 
+#=================================
+# CookIt! Co-operative Cooking Game
+# By Anton Medina
+#=================================
 
 GPIO.setmode(GPIO.BCM)
 
+#===
+# Input/Output setup for EveOne Board
+#===
 GPIO.setup(22, GPIO.IN)
 GPIO.setup(24, GPIO.IN)
 GPIO.setup(25, GPIO.IN)
@@ -16,6 +23,9 @@ GPIO.setup(18, GPIO.OUT)
 
 pygame.init()
 
+#===
+# Names of stations for characters to interact with
+#===
 playerBStations = ["Send", "Trash", "Cut", "Cut", "Cut", "Prep", "Prep", "Prep", "Collect"]
 playerAStations = ["Collect", "Cook", "Cook", "Cook", "Lettuce", "Tomato", "Meat", "Trash", "Send"]
 
@@ -28,9 +38,17 @@ pygame.display.set_caption("Cook It!")
 
 screen=pygame.display.set_mode(size)
 
+#===
+# Gets the on-screen position of the player based on the position of their pot
+# player: the id of the player to read position
+# @return: player position
+#===
 def getPlayerPosition(player):
     return min(int(float(analog.read(player,0))/825.0 *9), 9)
 
+#===
+# Draws the names of the cooking stations
+#===
 def drawCookStations():
         for i in range (0, len(playerBStations)):
             screen.blit(font.render(playerBStations[i],1,white),(50+60*i,250))
@@ -49,22 +67,37 @@ def drawCookStations():
         drawIcon(collectB, 50+60*8,260)
         drawIcon(collectA, 50,460)
 
+#===
+# Draws the order and patience of each customer
+#===
 def drawCustomers():            
     for i in range (0, 5):
         if(orderTime[i]>0):
             drawOrder(orders[i],20+80*i,50)
             screen.blit(font.render(str(orderTime[i]),1,white),(40+80*i,50))
         
+#===
+# Draws the players in their positions
+#===
 def drawPlayers():
         pygame.draw.circle(screen,[0,255,255],[540-60*getPlayerPosition(0),200], 20, 2)
         pygame.draw.circle(screen,[255,0,255],[540-60*getPlayerPosition(1),400], 20, 2)
     
+#===
+# Draws what each character is holding
+#===
 def drawInventory():
         drawIcon(inventoryB, 550,120)
         drawIcon(inventoryA, 550,360)
         screen.blit(font.render("Carrying: ",1,white),(520,100))
         screen.blit(font.render("Carrying: ",1,white),(520,350))
 
+#===
+# Draws the icon of the ingredient.
+# iconID: the id of the ingredient
+# x: the x value of the icon
+# y: the y value of the icon
+#===
 def drawIcon(iconID, x, y):
     y+=15
     if(iconID==1):
@@ -84,10 +117,21 @@ def drawIcon(iconID, x, y):
     elif(iconID==8):
         pygame.draw.circle(screen,[225,0,0],[x,y], 10)
 
+
+#===
+# Draws the ingredients that make up the order
+# ordr: the string of ingredients to draw
+# x: the x position to draw it on
+# y: the y position to draw it on
+#===
 def drawOrder(ordr, x, y):
     for i in range(0,len(ordr)):
         drawIcon(int(ordr[i]),x+10*i,y)
     
+#===
+# Shifts the orders after an order is finished
+# start: the order index to start shifting from
+#===
 def shiftOrders(start):
     for i in range(start, 4):
         orders[i]=orders[i+1]
@@ -95,7 +139,13 @@ def shiftOrders(start):
 
     orders[4]=""
     orderTime[4]=0
-  
+
+#===
+# Checks whether or not the current served plate is a valid order.
+# If it is, gain points based on how happy the customer is.
+# plateServed: the string of ingredients on the current plate
+# @return: points gained
+#===
 def checkValidOrder(plateServed):
     addPoints = 0
     
@@ -106,10 +156,17 @@ def checkValidOrder(plateServed):
             break
         
     return addPoints
-        
+
+#===
+# Check if two ingredient strings are equal by comparing if they have the same
+# amount of meat, lettuce, and tomato
+# plateServed: the ingredient string of the plate being served
+# orderTarget: the ingredient string of the customer order being checked
+# @return: true if they match, false if they don't
+#===
 def checkOrderString(plateServed, orderTarget):
     serveIngredients = [0,0,0]
-    orderIngredteints = [0,0,0]
+    orderIngredients = [0,0,0]
     same = False
     
     if(len(plateServed)==len(orderTarget)):
@@ -122,18 +179,21 @@ def checkOrderString(plateServed, orderTarget):
                 serveIngredients[2]+=1
                 
             if(orderTarget[i]=="3"):
-                orderIngredteints[0]+=1
+                orderIngredients [0]+=1
             elif(orderTarget[i]=="6"):
-                orderIngredteints[1]+=1
+                orderIngredients [1]+=1
             elif(orderTarget[i]=="8"):
-                orderIngredteints[2]+=1
-        if(serveIngredients[0] == orderIngredteints[0] and
-            serveIngredients[1] == orderIngredteints[1] and
-            serveIngredients[2] == orderIngredteints[2]):
+                orderIngredients [2]+=1
+        if(serveIngredients[0] == orderIngredients [0] and
+            serveIngredients[1] == orderIngredients [1] and
+            serveIngredients[2] == orderIngredients [2]):
             same = True
 
     return same
 
+#===
+# Randomly generate an order for a customer.
+#===
 def makeOrder():
     orderID=-1
     order = "3" #Include meat by default
@@ -156,12 +216,17 @@ def makeOrder():
         orders[orderID] = order
         orderTime[orderID] = max(2500-points, 1000)
 
-
+#===
+# Display lights on EveOne board according to number of lives
+#===
 def displayLightLives(lives):
     GPIO.output(4,lives==2)
     GPIO.output(18,lives>=1)
     GPIO.output(17,lives>=0)
     
+#===
+# Display the main menu for the player
+#===
 def displayMainMenu():
     screen.fill(black)
 
@@ -170,6 +235,9 @@ def displayMainMenu():
 
     pygame.display.flip()
 
+#===
+# Display a game over message when the player loses
+#===
 def displayGameOver(points):
     screen.fill(black)
     screen.blit(font.render("Game OVER! Points: "+str(points),1,white),(10,10)) 
@@ -177,6 +245,10 @@ def displayGameOver(points):
 
     #WAIT FOR INPUT
 
+#===
+# Updates the screen every iteration and draws the game
+# lives: number of lives the players have
+#===
 def updateScreen(lives)
 
     screen.fill(black)
@@ -190,6 +262,9 @@ def updateScreen(lives)
 
     pygame.display.flip()
 
+#===
+# Main iteration loop
+#===
 try:
     while 1:
                 
